@@ -1,0 +1,162 @@
+---
+title: "France Economic Report"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+---
+
+
+```{r}
+#remotes::install_github("mitchelloharawild/icons", force = TRUE)
+```
+
+
+```{r}
+library(flexdashboard)
+library(ggiraphExtra)
+library(ggplot2)
+library(shinydashboard)
+library(dplyr)
+library(readr)
+library(ggthemes)
+library(maps)
+```
+
+```{r}
+gdp5 <- readr::read_csv("https://raw.githubusercontent.com/warint/DPR/main/chapter10/data/chapter10data.csv")
+```
+
+```{r}
+#ggplot(data = gdp5, aes(x = year, y = gdp, color = country)) +
+  #geom_line(size = 1) +
+  #geom_point(size = 1) +
+  #xlab("Years") +
+  #ylab("Gross domestic product")  +
+  #labs(fill = "Country")  +  
+  #theme_minimal() +
+  #scale_color_brewer(direction = -1)
+```
+
+```{r}
+gdp6 <- filter(gdp5, year == 2017)
+```
+
+```{r}
+#ggplot(data = gdp6, aes(x = country, y = gdp, fill = country)) + 
+  #geom_bar(stat = "identity", width = 0.5, position = "dodge") + 
+  #xlab("") +
+  #ylab("Gross domestic product")  +
+  #labs(fill = "country")  +  
+  #theme_minimal() + 
+  #scale_fill_brewer(direction = 1)
+```
+
+```{r}
+france <- readr::read_csv("https://raw.githubusercontent.com/warint/DPR/main/chapter11/data/chapter11data.csv")
+
+france_2017 <- filter(france, year == 2017)
+
+# Fonction pour séparer une variable double en deux parties
+split_double <- function(x) {
+  # Convertir la valeur en chaîne de caractères et la diviser en deux parties
+  parts <- strsplit(x, "[eE]")[[1]] 
+
+  # Remplacer la virgule par un point décimal
+  part1 <- gsub(",", ".", parts[1])
+
+  # Extraire les parties individuelles en tant que nombres
+  part1 <- as.numeric(part1)
+  part2 <- as.numeric(parts[2])
+
+  # Retourner un vecteur contenant les deux parties séparées
+  return(c(part1, part2))
+}
+
+result <- split_double(as.character(france_2017$gdp))
+montant_gdp <- result[1] # affiche la première partie de la première valeur de gdp
+mont_gdp <- montant_gdp * 1000
+
+montant_fdi <- mean(france$fdi) / 1000000000
+mont_fdi <- floor(montant_fdi)
+
+montant_laborForce <- france_2017$laborForce / 1000000
+mont_lf <- floor(montant_laborForce)
+
+```
+Row 
+-------------------------------------
+###
+```{r}
+
+france_map <- map_data("world")
+france_map <- subset(france_map, region  %in% "France")
+
+ggplot(data = france_map, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(fill = "white", color = "black") + 
+  coord_fixed(ratio=1.1, xlim = c(-5, 10)) +
+  theme_void()
+```
+
+### Chart 2
+```{r}
+flexdashboard::valueBox(
+  value = mont_gdp,
+  caption = "Gross Domestic Product (Billions USD) in 2017",
+  icon = "fas fa-eur",
+  color = "success"
+)
+
+```
+
+### Chart 3
+```{r}
+flexdashboard::valueBox(
+  mont_fdi,
+  caption = "Foreign Direct Invesment (Billions USD) in 2017",
+  icon = "fa fa-arrow-circle-up",
+  color = "info")
+```
+
+### Chart 4
+```{r}
+flexdashboard::valueBox(
+  mont_lf,
+  caption = "Labor Force (Millions) in 2017",
+  icon = "fa fa-user-tie",
+  color = "primary")
+```
+Row {data-height=650}
+-------------------------------------
+### Gross Domestic Product (1990-2017)
+```{r}
+ggplot(data = france, aes(x = year, y = gdp)) +
+  geom_line(color = "green", size = 1.5) +
+  xlab("Year") +
+  ylab("Gross Domestic Product") +
+  theme_minimal() +
+  scale_color_brewer(direction = -1) + 
+  geom_point(size = 3, color="green")
+```
+
+### Foreign Direct Investment (1990-2017)
+```{r}
+ggplot(data = france, aes(x = year, y = fdi)) +
+  geom_line(color = "#83CEEC", size = 1.5) +
+  xlab("Year") +
+  ylab("Foreign Direct Investments") +
+  theme_minimal() +
+  scale_color_brewer(direction = -1) + 
+  geom_point(size = 3, color="#83CEEC")
+```
+
+### Labor Force (1990-2017)
+```{r}
+ggplot(data = france, aes(x = year, y = laborForce)) +
+  geom_line(color = "#66ABCB", size = 1.5) +
+  xlab("Year") +
+  ylab("Labor Force") +
+  theme_minimal() +
+  scale_color_brewer(direction = -1) + 
+  geom_point(size = 3, color="#66ABCB")
+```
+
