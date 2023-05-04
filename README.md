@@ -1,2 +1,2 @@
 # SDA-Jospine
-Travaux de maison en R
+Travaux pratiques en R
