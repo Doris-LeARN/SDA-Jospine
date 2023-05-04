@@ -1,0 +1,278 @@
+---
+title: "Practice-Market"
+author: "Doris"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Utilisation d'une source de données csv 
+
+## Loading the dataset
+```{r}
+install.packages("readr")
+library(readr)
+dataVentes <- readr::read_csv("https://raw.githubusercontent.com/kevindegila/data-analyst/main/datasets/SalesAnalysis/Output/all_data.csv")
+```
+
+## les n premières lignes de data
+```{r}
+## les n dernières ligne de dataMovie
+head(dataVentes)
+```
+
+## les n dernières ligne de data
+```{r}
+## les n dernières ligne de dataMovie
+tail(dataVentes, n=10)
+```
+
+## le nom des variables (colonnes) de dataMovie
+```{r}
+colnames(dataVentes)
+```
+
+## le type des variables (colonnes) de dataMovie
+```{r}
+## le type des variables (colonnes) de dataMovie
+str(dataVentes)
+```
+
+## Extraire des données avec une taille donnée
+```{r}
+install.packages("dplyr")
+library("dplyr")
+sample_n(dataVentes, 10)
+```
+
+## Description complète du dataframe
+```{r}
+library("dplyr")
+summary(dataVentes)
+```
+
+## Les produits les plus vendus triés par ordre décroissant
+```{r}
+library("dplyr")
+count(dataVentes, Product, sort=TRUE)
+```
+
+## la boutique ayant le plus vendu par ordre décroissant
+```{r}
+library("dplyr")
+count(dataVentes, `Purchase Address`, sort=TRUE)
+```
+
+## Les points de ventes uniques
+```{r}
+library("dplyr")
+unique(dataVentes$`Purchase Address`)
+```
+
+## Ventes par produit et par adresse d'achat
+```{r}
+table(dataVentes$Product)
+table(dataVentes$`Purchase Address`)
+```
+
+## la boutique qui a le plus vendu
+```{r}
+library("dplyr")
+##distinct(dataVentes$`Purchase Address`)
+```
+
+## Nettoyage de la donnée
+
+### Afficher toutes les lignes NA
+```{r}
+is_all_null <- apply(is.na(dataVentes), 1, all)
+dataVentes[is_all_null,]
+```
+
+### Récupérer les index des lignes NA
+```{r}
+a_delete <- which(apply(is.na(dataVentes), 1, all))
+a_delete
+```
+
+### Supprimer les valeurs manquantes
+```{r}
+newDataVentes <- dataVentes[!apply(is.na(dataVentes), 1, all),]
+newDataVentes
+```
+
+### Vérifier si les suppressions ont marché
+```{r}
+is.na(newDataVentes)
+```
+
+
+## Trouver la ville qui vend le plus
+```{r}
+library("dplyr")
+ville <- function(adress) {
+  strsplit(adress, ',')[[1]][2] %>% trimws()
+}
+
+# Remove rows with invalid purchase addresses
+newDataVentes <- newDataVentes[newDataVentes$`Purchase Address` != "Purchase Address",]
+
+# Add a new column "Ville" to the data frame
+newDataVentes$Ville <- sapply(newDataVentes$`Purchase Address`, ville)
+
+# Get the unique cities in the "Ville" column
+unique_cities <- unique(newDataVentes$Ville)
+
+# Print the top selling city
+freq_cities <- table(newDataVentes$Ville)
+max_freq <- max(freq_cities)
+top_city <- which(freq_cities == max_freq, arr.ind = TRUE)
+print(top_city)
+
+# Print the city sales count
+newDataVentes$Ville %>% table() %>% sort(decreasing = TRUE)
+
+```
+
+## Les Produits vendus ensembles
+
+### Vérifier s'il y a toujours des lignes NA
+```{r}
+is_all_null <- apply(is.na(newDataVentes), 1, all)
+newDataVentes[is_all_null,]
+```
+
+### Convertir la colonne "Product" en facteur pour faciliter la manipulation
+```{r}
+library("dplyr")
+library("stringr")
+newDataVentes$Product <- as.factor(newDataVentes$Product)
+
+newDataVentes <- newDataVentes %>%
+  group_by(`Order ID`) %>%
+  mutate(Produits_Together = paste(unique(Product), collapse = ", "))
+
+newDataVentes_paires <- newDataVentes %>%
+  group_by(Produits_Together) %>%
+  summarize(count = n()) %>%
+  filter(str_count(Produits_Together, ",") == 1) %>%
+  top_n(10)
+newDataVentes_paires
+```
+
+## Trvailler sur les dates 
+```{r}
+install.packages("lubridate")
+library(lubridate)
+```
+#### Convertir la colonne en datetime
+```{r}
+newDataVentes$`Order Date` <- as.POSIXct(newDataVentes$`Order Date`, format="%m/%d/%Y %H:%M")
+```
+#### Créer la colonne Month
+```{r}
+newDataVentes$Month <- month(newDataVentes$`Order Date`)
+```
+#### Créer la colonne Year
+```{r}
+newDataVentes$Year <- year(newDataVentes$`Order Date`)
+```
+#### Créer la colonne Month
+```{r}
+newDataVentes$Hour <- hour(newDataVentes$`Order Date`)
+```
+
+## Calculer le prix d'achat de chaque Produit
+```{r}
+newDataVentes$`Quantity Ordered` <- as.numeric(newDataVentes$`Quantity Ordered`)
+newDataVentes$`Price Each` <- as.numeric(newDataVentes$`Price Each`)
+
+newDataVentes$`Purchase Price` <- newDataVentes$`Quantity Ordered` * newDataVentes$`Price Each`
+```
+
+
+
+# Visualisation des données
+```{r}
+install.packages("maps")
+install.packages("leaflet")
+install.packages("ggplot2")
+install.packages("tmaptools")
+install.packages("htmlwidgets")
+install.packages("ggsci")
+```
+
+## Afficher une carte avec les villes où est présente le supermarché
+```{r}
+library(dplyr)
+library(leaflet)
+
+# extraire les noms des villes uniques dans la colonne "Ville"
+villes <- unique(newDataVentes$Ville)
+
+# géocoder les villes pour obtenir leurs coordonnées de latitude et longitude
+coord_list <- lapply(villes, function(x) {
+  tryCatch(geocode(x, output = "latlon"), error = function(e) NULL)
+})
+
+# créer la carte
+ma_carte <- leaflet() %>%
+  setView(lng = -95.7129, lat = 37.0902, zoom = 4)
+
+# ajouter tous les marqueurs à la carte
+for (i in 1:length(villes)) {
+  if (!is.null(coord_list[[i]])) {
+    ma_carte <- ma_carte %>% addMarkers(lng = coord_list[[i]]$lon, lat = coord_list[[i]]$lat, popup = villes[i])
+  }
+}
+
+# afficher la carte
+ma_carte
+
+```
+
+## Visualisation du chiffre d'affaire par Mois en fonction des Années
+```{r}
+if (!require("colorspace")) {
+  install.packages("colorspace")
+}
+if (!require("farver")) {
+  install.packages("farver")
+}
+library(dplyr)
+library(ggplot2)
+library(ggsci)
+
+# grouper les données par année et calculer la somme du chiffre d'affaires
+Sales_Revenues <- newDataVentes %>%
+  group_by(Month, Year) %>%
+  summarize(CA = sum(`Purchase Price`), .groups = 'drop')
+
+# Tracer le graphique
+ggplot(data = Sales_Revenues, aes(x = paste(Year, Month, sep="-"), y = CA, group = Year)) +
+  geom_line(color = "pink", size = 1.5) +
+  xlab("Mois et année") +
+  ylab("Chiffre d'affaires") +
+  ggtitle("Chiffre d'affaires par mois et par année") +
+  theme_minimal() +
+  scale_color_brewer(direction = -1) + 
+  geom_point(size = 1.5)
+```
+
+## Visualisation des Produits vendus ensemble
+```{r}
+library(ggplot2)
+
+# Créer le graphique à barres empilées
+ggplot(newDataVentes, aes(x = "", fill = `Produits_Together`)) +
+  geom_bar(width = 1, color = "white") +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  scale_fill_viridis_d() +
+  ggtitle("Produits vendus ensemble") +
+  coord_polar(theta = "y") +
+  labs(fill = "Combinaison de produits")
+
+```
