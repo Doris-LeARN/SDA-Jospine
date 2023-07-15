@@ -1,0 +1,57 @@
+---
+title: "TP3"
+author: "Doris"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(gsheet)
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+```{r}
+dataUnido <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1uLaXke-KPN28-ESPPoihk8TiXVWp5xuNGHW7w7yqLCc/edit#gid=416085055")
+dataUnido
+```
+
+
+```{r}
+dataUnido$newColumn <- 42
+colnames(dataUnido)
+```
+
+
+```{r}
+dataUnidoCanada <- filter(dataUnido, countryCode == 124)
+dim(dataUnidoCanada)
+```
+
+
+```{r}
+dataUnidoCanadaVariables <- filter(dataUnidoCanada, tableCode == 4 | tableCode == 1)
+dataUnidoCanadaVariables
+```
+
+
+```{r}
+dataUnidoCanadaVariablesAfter2009 <- filter(dataUnidoCanadaVariables, year > 2009)
+dataUnidoCanadaVariablesAfter2009
+```
+
+
+```{r}
+dataSorted <- arrange(dataUnidoCanadaVariablesAfter2009, value)
+dataSorted
+```
+
+```{r}
+dataReverse <- arrange(dataUnidoCanadaVariablesAfter2009, desc(value))
+dataReverse
+```
